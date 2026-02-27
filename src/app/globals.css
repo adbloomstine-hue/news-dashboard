@@ -1,0 +1,204 @@
+/*
+ * Google Fonts are loaded via next/font/google in src/app/layout.tsx.
+ * Do NOT add @import rules here — they must precede @tailwind directives
+ * in raw CSS, but Next.js/PostCSS handles fonts through the font module
+ * system instead. Mixing @import with @tailwind causes HMR to drop the
+ * entire stylesheet on hot reloads, leaving the page unstyled.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties — CGA Brand Palette (admin) ─────────────────────── */
+:root {
+  --radius: 0.875rem;
+
+  --brand-primary:   #6EC21E;
+  --brand-secondary: #1E6BC0;
+
+  --bg-base:    #071D2A;
+  --bg-muted:   #041520;
+
+  --surface:         #0D2F42;
+  --surface-raised:  #114055;
+  --surface-overlay: #155268;
+  --surface-border:  #1B4A61;
+  --surface-nav:     #0A2535;
+
+  /* Admin text (dark-theme) */
+  --text-primary:   #E0EEF5;
+  --text-secondary: #8BB8CC;
+  --text-muted:     #4A7A94;
+  --text-on-nav:    #FFFFFF;
+
+  --status-approve:  #5CB520;
+  --status-reject:   #C04030;
+  --status-manual:   #C47A20;
+  --status-queued:   #1E6BC0;
+  --status-priority: #7C5BA8;
+}
+
+/* ─── Base Styles ────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    /*
+     * White background for the public-facing news dashboard.
+     * Admin layout has an explicit bg-bg-base wrapper that overrides this,
+     * keeping the CGA dark-teal theme intact for all admin pages.
+     */
+    @apply bg-white text-ink font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+
+  /* Focus ring — works on both light (public) and dark (admin) backgrounds */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ink ring-offset-2 ring-offset-white;
+  }
+
+  /* Scrollbar — neutral, works on both themes */
+  ::-webkit-scrollbar       { @apply w-1.5 h-1.5; }
+  ::-webkit-scrollbar-track { background: #f0f0f0; }
+  ::-webkit-scrollbar-thumb { background: #cccccc; @apply rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { background: #999999; }
+}
+
+/* ─── Admin Component Utilities (dark CGA theme) ────────────────────────────── */
+@layer components {
+
+  /* Glass card — dark teal surface (admin) */
+  .glass-card {
+    @apply bg-surface rounded-2xl border border-surface-border shadow-card
+           transition-all duration-200;
+  }
+  .glass-card:hover {
+    @apply bg-surface-raised border-brand-600/40;
+    box-shadow:
+      0 4px 20px 0 rgba(110, 194, 30, 0.13),
+      0 1px 4px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* Gradient text — green → blue */
+  .gradient-text {
+    background: linear-gradient(135deg, #6EC21E 0%, #1E6BC0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shimmer skeleton (admin) */
+  .skeleton {
+    @apply relative overflow-hidden bg-surface-raised rounded-lg;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 bg-shimmer-gradient bg-[length:200%_100%] animate-shimmer;
+  }
+
+  /* Status pills */
+  .status-queued {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-medium
+           bg-blue-600/10 text-blue-400
+           ring-1 ring-inset ring-blue-500/30;
+  }
+  .status-approved {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-medium
+           bg-brand-500/10 text-brand-400
+           ring-1 ring-inset ring-brand-500/30;
+  }
+  .status-rejected {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-medium
+           bg-red-700/10 text-red-400
+           ring-1 ring-inset ring-red-600/25;
+  }
+  .status-manual {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-medium
+           bg-amber-500/10 text-amber-400
+           ring-1 ring-inset ring-amber-500/30;
+  }
+
+  /* Priority indicator */
+  .priority-indicator {
+    @apply inline-flex items-center gap-1 text-purple-400 text-xs font-medium;
+  }
+
+  /* Admin sidebar nav items */
+  .nav-item-active {
+    @apply bg-brand-400/10 text-brand-400 border-l-2 border-l-brand-400 font-semibold;
+  }
+  .nav-item {
+    @apply text-white/65 hover:text-white hover:bg-surface-raised/60
+           border-l-2 border-l-transparent
+           hover:border-l-brand-400/50
+           transition-all duration-150;
+  }
+
+  /* CGA admin nav header */
+  .cga-nav-header {
+    background-color: var(--surface-nav);
+    border-bottom: 1px solid rgba(27, 74, 97, 0.8);
+  }
+
+  /* ── NYT-style public dashboard components ───────────────────────────────── */
+
+  /* Article card — clean divider-line style, no box shadow */
+  .nyt-card {
+    @apply py-5 border-b border-paper-rule transition-colors duration-150;
+  }
+  .nyt-card:last-child {
+    @apply border-b-0;
+  }
+  .nyt-card:hover {
+    @apply bg-paper-hover;
+  }
+
+  /* Public search bar — override dark Input styles */
+  .nyt-search input {
+    background-color: #ffffff !important;
+    border-color: #E2E2E2 !important;
+    color: #121212 !important;
+    border-radius: 0 !important;
+  }
+  .nyt-search input::placeholder {
+    color: #999999 !important;
+  }
+  .nyt-search input:focus {
+    border-color: #121212 !important;
+    box-shadow: none !important;
+    ring: none !important;
+  }
+  .nyt-search span {
+    color: #999999 !important;
+  }
+}
+
+/* ─── Utilities ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .animate-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .article-card { @apply animate-fade-in; }
+
+  .live-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-brand-400 animate-radial-pulse;
+  }
+
+  .radial-bg {
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(30,107,192,0.1) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 40% at 85% 10%,  rgba(110,194,30,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 40% at 15% 90%,  rgba(110,194,30,0.06) 0%, transparent 50%);
+  }
+}

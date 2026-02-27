@@ -1,0 +1,142 @@
+// Prisma Schema — News Dashboard
+// Supports SQLite (dev) and PostgreSQL (production)
+// Switch by changing the provider and DATABASE_URL in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+// Note: SQLite doesn't support native enums — stored as String with validation
+
+// ArticleStatus: QUEUED | APPROVED | REJECTED | NEEDS_MANUAL
+// IngestSource:  RSS | NEWS_API | MANUAL
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Article {
+  id             String    @id @default(cuid())
+  title          String
+  outlet         String
+  outletDomain   String
+  publishedAt    DateTime
+  url            String    @unique
+  // Stored as JSON string (SQLite doesn't support arrays natively)
+  // Format: ["keyword1","keyword2"]
+  keywordsMatched String   @default("[]")
+  snippet        String?
+  manualSummary  String?
+  // ArticleStatus enum values: QUEUED | APPROVED | REJECTED | NEEDS_MANUAL
+  status         String    @default("QUEUED")
+  priority       Boolean   @default(false)
+  // Tags stored as JSON string array: ["tag1","tag2"]
+  tags           String    @default("[]")
+  // IngestSource enum values: RSS | NEWS_API | MANUAL
+  ingestSource   String    @default("RSS")
+  imageUrl       String?
+  author         String?
+  // News section: null = general (shown on home page), "cardrooms" | "tribal" | "gaming"
+  section        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  auditLogs      AuditLog[]
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([outletDomain])
+  @@index([section])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // NextAuth session support
+  sessions     Session[]
+  accounts     Account[]
+}
+
+// NextAuth required models
+model Account {
+  id                 String   @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  user               AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  articleId  String?
+  action     String   // APPROVED | REJECTED | EDITED | QUEUED | MANUAL_ENTRY | INGESTED
+  actorEmail String
+  timestamp  DateTime @default(now())
+  // JSON string with before/after diff or extra context
+  details    String   @default("{}")
+
+  article    Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+  @@index([timestamp])
+  @@index([actorEmail])
+}
+
+model IngestRun {
+  id          String   @id @default(cuid())
+  source      String   // RSS | NEWS_API
+  feedUrl     String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  articlesFound    Int @default(0)
+  articlesCreated  Int @default(0)
+  articlesDuped    Int @default(0)
+  error       String?
+
+  @@index([startedAt])
+}
+
+model Keyword {
+  id        String   @id @default(cuid())
+  term      String   @unique
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled])
+}
