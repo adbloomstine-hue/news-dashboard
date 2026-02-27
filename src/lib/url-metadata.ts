@@ -14,7 +14,7 @@
  *   - Does NOT follow login redirects
  *   - Does NOT store full article body text
  *   - Identifies itself with a descriptive User-Agent
- *   - Respects a strict 12-second timeout
+ *   - Respects a strict 8-second timeout
  *   - Caps the HTML response at 5 MB to avoid memory issues
  */
 
@@ -330,7 +330,7 @@ function resolveImageUrl(rawUrl: string | null, pageUrl: string): string | null 
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-const FETCH_TIMEOUT_MS    = 12_000;
+const FETCH_TIMEOUT_MS    = 8_000;
 const MAX_RESPONSE_BYTES  = 5 * 1024 * 1024; // 5 MB cap
 const USER_AGENT =
   "NewsDashboard-MetaBot/1.0 (compliant metadata reader; contact: admin@example.com)";
@@ -416,7 +416,7 @@ export async function fetchUrlMetadata(rawUrl: string): Promise<UrlMetadata> {
   } catch (err) {
     const msg =
       err instanceof Error && err.name === "TimeoutError"
-        ? "Request timed out (12s). The site may be slow or blocking bots."
+        ? "Request timed out (8s). The site may be slow or blocking bots."
         : err instanceof Error
         ? err.message
         : "Network error";

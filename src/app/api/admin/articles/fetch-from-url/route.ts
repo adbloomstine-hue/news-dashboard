@@ -34,6 +34,10 @@ import { fetchUrlMetadata, normalizeUrl } from "@/lib/url-metadata";
 import { parseJsonArray }            from "@/lib/utils";
 import type { Article }              from "@/types";
 
+// ─── Vercel serverless config ─────────────────────────────────────────────────
+// Allow up to 60s on Pro / 10s on Hobby (Vercel caps to plan maximum)
+export const maxDuration = 60;
+
 // ─── Input schema ─────────────────────────────────────────────────────────────
 
 const bodySchema = z.object({
