@@ -1,14 +1,14 @@
 // Prisma Schema — News Dashboard
-// Supports SQLite (dev) and PostgreSQL (production)
-// Switch by changing the provider and DATABASE_URL in .env
+// Uses Turso (libSQL) via the driver adapter
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = env("TURSO_DATABASE_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -117,26 +117,3 @@ model AuditLog {
   @@index([actorEmail])
 }
 
-model IngestRun {
-  id          String   @id @default(cuid())
-  source      String   // RSS | NEWS_API
-  feedUrl     String?
-  startedAt   DateTime @default(now())
-  finishedAt  DateTime?
-  articlesFound    Int @default(0)
-  articlesCreated  Int @default(0)
-  articlesDuped    Int @default(0)
-  error       String?
-
-  @@index([startedAt])
-}
-
-model Keyword {
-  id        String   @id @default(cuid())
-  term      String   @unique
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([enabled])
-}

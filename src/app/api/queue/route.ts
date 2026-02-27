@@ -10,7 +10,6 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { sanitizeText } from "@/lib/sanitize";
-import { getTrackedKeywords, matchKeywords } from "@/ingestion/keywords";
 import { parseJsonArray } from "@/lib/utils";
 import type { Article } from "@/types";
 
@@ -80,9 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Article with this URL already exists", id: existing.id }, { status: 409 });
   }
 
-  const trackedKeywords = await getTrackedKeywords();
-  const searchText      = `${data.title} ${data.snippet ?? ""} ${data.manualSummary ?? ""}`;
-  const keywords        = matchKeywords(searchText, trackedKeywords);
+  const keywords: string[] = [];
 
   const article = await prisma.article.create({
     data: {

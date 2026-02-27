@@ -34,7 +34,6 @@ interface FetchResult {
 
 export function UrlFetchBar({ onArticleFetched }: UrlFetchBarProps) {
   const [url,           setUrl]           = useState("");
-  const [matchKw,       setMatchKw]       = useState(true);
   const [fetchState,    setFetchState]    = useState<FetchState>("idle");
   const [result,        setResult]        = useState<FetchResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +72,7 @@ export function UrlFetchBar({ onArticleFetched }: UrlFetchBarProps) {
       const res = await fetch("/api/admin/articles/fetch-from-url", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ url: trimmed, matchKeywords: matchKw }),
+        body:    JSON.stringify({ url: trimmed }),
       });
 
       const data = await res.json();
@@ -162,30 +161,6 @@ export function UrlFetchBar({ onArticleFetched }: UrlFetchBarProps) {
           </p>
         </div>
 
-        {/* Keyword match toggle */}
-        <label className="flex items-center gap-2 shrink-0 cursor-pointer select-none">
-          <span className="text-xs text-[--text-secondary] hidden sm:inline">Match keywords</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={matchKw}
-            aria-label="Match keywords against tracked list"
-            onClick={() => setMatchKw((v) => !v)}
-            className={cn(
-              "relative inline-flex h-5 w-9 items-center rounded-full border-2 transition-colors shrink-0",
-              matchKw
-                ? "bg-brand-600 border-brand-500"
-                : "bg-surface-overlay border-surface-border"
-            )}
-          >
-            <span
-              className={cn(
-                "inline-block h-3 w-3 transform rounded-full bg-white transition-transform shadow-sm",
-                matchKw ? "translate-x-4" : "translate-x-1"
-              )}
-            />
-          </button>
-        </label>
       </div>
 
       {/* ── URL Input + Fetch button ─────────────────────────────────── */}

@@ -10,7 +10,7 @@
  *   - Rate limited per admin user: 30 requests / hour
  *
  * Request body:
- *   { url: string, matchKeywords?: boolean }
+ *   { url: string }
  *
  * Responses:
  *   201  — Article created, returns full Article object
@@ -30,7 +30,6 @@ import { authOptions }               from "@/lib/auth";
 import { writeAuditLog }             from "@/lib/audit";
 import { rateLimit }                 from "@/lib/rate-limit";
 import { sanitizeText, sanitizeAndTruncate } from "@/lib/sanitize";
-import { getTrackedKeywords, matchKeywords } from "@/ingestion/keywords";
 import { fetchUrlMetadata, normalizeUrl } from "@/lib/url-metadata";
 import { parseJsonArray }            from "@/lib/utils";
 import type { Article }              from "@/types";
@@ -53,7 +52,6 @@ const bodySchema = z.object({
       },
       { message: "Must be a valid http or https URL" }
     ),
-  matchKeywords: z.boolean().default(true),
 });
 
 // ─── Rate limit: 30 URL fetches per hour per admin ───────────────────────────
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { url: rawUrl, matchKeywords: doMatchKeywords } = parsed.data;
+  const { url: rawUrl } = parsed.data;
 
   // 4. Normalize URL and check for duplicates
   const normalizedUrl = normalizeUrl(rawUrl);
@@ -134,10 +132,8 @@ export async function POST(req: NextRequest) {
       ? "NEEDS_MANUAL"
       : "QUEUED";
 
-  // 7. Keyword matching
-  const trackedKeywords = await getTrackedKeywords();
-  const searchText      = `${meta.title ?? ""} ${meta.snippet ?? ""} ${meta.outlet ?? ""}`;
-  const kwMatches       = doMatchKeywords ? matchKeywords(searchText, trackedKeywords) : [];
+  // 7. Keywords (no longer auto-matched)
+  const kwMatches: string[] = [];
 
   // 8. Derive outlet from domain if not found
   const outlet       = sanitizeText(meta.outlet ?? meta.outletDomain);

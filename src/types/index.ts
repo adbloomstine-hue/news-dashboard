@@ -67,30 +67,6 @@ export interface ArticleEditPayload {
   section?:       ArticleSection | null;
 }
 
-// ─── Ingestion ────────────────────────────────────────────────────────────────
-export interface RawArticle {
-  title:       string;
-  url:         string;
-  outlet:      string;
-  outletDomain:string;
-  publishedAt: Date;
-  snippet?:    string;
-  imageUrl?:   string;
-  author?:     string;
-  source:      IngestSource;
-}
-
-export interface IngestionResult {
-  source:          string;
-  /** Total items in the feed/response before keyword filtering */
-  articlesRaw:     number;
-  /** Items that matched at least one keyword */
-  articlesFound:   number;
-  articlesCreated: number;
-  articlesDuped:   number;
-  errors:          string[];
-}
-
 // ─── API Responses ────────────────────────────────────────────────────────────
 export interface ApiResponse<T = unknown> {
   success: boolean;
