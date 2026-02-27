@@ -61,128 +61,130 @@ const RATE_WINDOW_MS  = 60 * 60 * 1000;
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // 1. Auth
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const actorEmail = session.user.email;
+  try {
+    // 1. Auth
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const actorEmail = session.user.email;
 
-  // 2. Rate limit (key = "url-fetch:<email>")
-  const rl = rateLimit(`url-fetch:${actorEmail}`, RATE_LIMIT, RATE_WINDOW_MS);
-  if (!rl.success) {
-    return NextResponse.json(
-      {
-        error:   "Rate limit exceeded. You can fetch up to 30 URLs per hour.",
-        resetAt: rl.resetAt,
+    // 2. Rate limit (key = "url-fetch:<email>")
+    const rl = rateLimit(`url-fetch:${actorEmail}`, RATE_LIMIT, RATE_WINDOW_MS);
+    if (!rl.success) {
+      return NextResponse.json(
+        {
+          error:   "Rate limit exceeded. You can fetch up to 30 URLs per hour.",
+          resetAt: rl.resetAt,
+        },
+        {
+          status:  429,
+          headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+        }
+      );
+    }
+
+    // 3. Parse + validate body
+    let body: unknown;
+    try { body = await req.json(); } catch {
+      return NextResponse.json({ error: "Request body must be JSON" }, { status: 400 });
+    }
+
+    const parsed = bodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0]?.message ?? "Invalid request" },
+        { status: 400 }
+      );
+    }
+
+    const { url: rawUrl } = parsed.data;
+
+    // 4. Normalize URL and check for duplicates
+    const normalizedUrl = normalizeUrl(rawUrl);
+
+    const existing = await prisma.article.findFirst({
+      where: { url: { in: [rawUrl, normalizedUrl] } },
+    });
+    if (existing) {
+      return NextResponse.json(
+        {
+          error:      "This URL is already in the system.",
+          existingId: existing.id,
+          article:    formatArticle(existing),
+        },
+        { status: 409 }
+      );
+    }
+
+    // 5. Fetch metadata
+    const meta = await fetchUrlMetadata(normalizedUrl);
+
+    // If there was a hard fetch error AND we got no title at all, return 422
+    if (meta.fetchError && !meta.title) {
+      return NextResponse.json({ error: meta.fetchError }, { status: 422 });
+    }
+
+    // 6. Determine status
+    //    - NEEDS_MANUAL: paywalled/blocked, or fetch failed but we have a URL (admin can fill in)
+    //    - QUEUED: we got at least a title
+    const status: "QUEUED" | "NEEDS_MANUAL" =
+      meta.isPaywalled || (meta.fetchError !== null && !meta.title)
+        ? "NEEDS_MANUAL"
+        : "QUEUED";
+
+    // 7. Keywords (no longer auto-matched)
+    const kwMatches: string[] = [];
+
+    // 8. Derive outlet from domain if not found
+    const outlet       = sanitizeText(meta.outlet ?? meta.outletDomain);
+    const outletDomain = sanitizeText(meta.outletDomain || new URL(normalizedUrl).hostname.replace(/^www\./, ""));
+    const title        = sanitizeText(meta.title ?? `Article from ${outletDomain}`);
+    const snippet      = meta.snippet ? sanitizeAndTruncate(meta.snippet, 500) : null;
+
+    // 9. Published date — fall back to now if not found (admin can correct)
+    const publishedAt  = meta.publishedAt ?? new Date();
+
+    // 10. Create Article
+    const article = await prisma.article.create({
+      data: {
+        title,
+        outlet,
+        outletDomain,
+        url:             normalizedUrl,
+        publishedAt,
+        snippet,
+        manualSummary:   null,
+        keywordsMatched: JSON.stringify(kwMatches),
+        tags:            "[]",
+        priority:        false,
+        status,
+        ingestSource:    "URL",
+        imageUrl:        meta.imageUrl ?? null,
+        author:          meta.author   ? sanitizeText(meta.author)   : null,
       },
-      {
-        status:  429,
-        headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
-      }
-    );
-  }
+    });
 
-  // 3. Parse + validate body
-  let body: unknown;
-  try { body = await req.json(); } catch {
-    return NextResponse.json({ error: "Request body must be JSON" }, { status: 400 });
-  }
-
-  const parsed = bodySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.errors[0]?.message ?? "Invalid request" },
-      { status: 400 }
-    );
-  }
-
-  const { url: rawUrl } = parsed.data;
-
-  // 4. Normalize URL and check for duplicates
-  const normalizedUrl = normalizeUrl(rawUrl);
-
-  const existing = await prisma.article.findFirst({
-    where: { url: { in: [rawUrl, normalizedUrl] } },
-  });
-  if (existing) {
-    return NextResponse.json(
-      {
-        error:      "This URL is already in the system.",
-        existingId: existing.id,
-        article:    formatArticle(existing),
+    // 11. Audit log
+    await writeAuditLog({
+      articleId:  article.id,
+      action:     "URL_INGESTED",
+      actorEmail,
+      details: {
+        url:          normalizedUrl,
+        status,
+        isPaywalled:  meta.isPaywalled,
+        fetchError:   meta.fetchError,
+        kwMatches,
       },
-      { status: 409 }
-    );
+    });
+
+    return NextResponse.json(formatArticle(article), { status: 201 });
+  } catch (err) {
+    console.error("[fetch-from-url] Unhandled error:", err);
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // 5. Fetch metadata
-  const meta = await fetchUrlMetadata(normalizedUrl);
-
-  // If there was a hard fetch error AND we got no title at all, return 422
-  if (meta.fetchError && !meta.title) {
-    return NextResponse.json({ error: meta.fetchError }, { status: 422 });
-  }
-
-  // 6. Determine status
-  //    - NEEDS_MANUAL: paywalled/blocked, or fetch failed but we have a URL (admin can fill in)
-  //    - QUEUED: we got at least a title
-  const status: "QUEUED" | "NEEDS_MANUAL" =
-    meta.isPaywalled || (meta.fetchError !== null && !meta.title)
-      ? "NEEDS_MANUAL"
-      : "QUEUED";
-
-  // 7. Keywords (no longer auto-matched)
-  const kwMatches: string[] = [];
-
-  // 8. Derive outlet from domain if not found
-  const outlet       = sanitizeText(meta.outlet ?? meta.outletDomain);
-  const outletDomain = sanitizeText(meta.outletDomain || new URL(normalizedUrl).hostname.replace(/^www\./, ""));
-  const title        = sanitizeText(meta.title ?? `Article from ${outletDomain}`);
-  const snippet      = meta.snippet ? sanitizeAndTruncate(meta.snippet, 500) : null;
-
-  // 9. Published date — fall back to now if not found (admin can correct)
-  const publishedAt  = meta.publishedAt ?? new Date();
-
-  // 10. Create Article
-  const article = await prisma.article.create({
-    data: {
-      title,
-      outlet,
-      outletDomain,
-      url:             normalizedUrl,
-      publishedAt,
-      snippet,
-      manualSummary:   null,
-      keywordsMatched: JSON.stringify(kwMatches),
-      tags:            "[]",
-      priority:        false,
-      status,
-      ingestSource:    "URL",
-      // imageUrl is already validated as a well-formed http/https URL by
-      // fetchUrlMetadata — do NOT run sanitizeText/DOMPurify on it.
-      // DOMPurify HTML-serialises its output, turning `&` in query params into
-      // `&amp;`, which breaks CDN image URLs when used in <img src>.
-      imageUrl:        meta.imageUrl ?? null,
-      author:          meta.author   ? sanitizeText(meta.author)   : null,
-    },
-  });
-
-  // 11. Audit log
-  await writeAuditLog({
-    articleId:  article.id,
-    action:     "URL_INGESTED",
-    actorEmail,
-    details: {
-      url:          normalizedUrl,
-      status,
-      isPaywalled:  meta.isPaywalled,
-      fetchError:   meta.fetchError,
-      kwMatches,
-    },
-  });
-
-  return NextResponse.json(formatArticle(article), { status: 201 });
 }
 
 // ─── Formatter (matches shape expected by queue UI) ───────────────────────────
