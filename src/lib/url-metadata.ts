@@ -330,10 +330,10 @@ function resolveImageUrl(rawUrl: string | null, pageUrl: string): string | null 
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-const FETCH_TIMEOUT_MS    = 8_000;
+const FETCH_TIMEOUT_MS    = 15_000;
 const MAX_RESPONSE_BYTES  = 5 * 1024 * 1024; // 5 MB cap
 const USER_AGENT =
-  "NewsDashboard-MetaBot/1.0 (compliant metadata reader; contact: admin@example.com)";
+  "Mozilla/5.0 (compatible; NewsDashboard/1.0; +https://github.com)";
 
 /**
  * Fetch a URL and extract article metadata.
@@ -416,7 +416,7 @@ export async function fetchUrlMetadata(rawUrl: string): Promise<UrlMetadata> {
   } catch (err) {
     const msg =
       err instanceof Error && err.name === "TimeoutError"
-        ? "Request timed out (8s). The site may be slow or blocking bots."
+        ? "Request timed out (15s). The site may be slow or blocking bots."
         : err instanceof Error
         ? err.message
         : "Network error";
