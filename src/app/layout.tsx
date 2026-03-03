@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Playfair_Display } from "next/font/google";
+import { AuthGate } from "@/components/AuthGate";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${playfairDisplay.variable} font-sans`}>
-        {children}
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

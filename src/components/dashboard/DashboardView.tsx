@@ -83,6 +83,10 @@ export function DashboardView({ section = null }: DashboardViewProps) {
       params.set("pageSize", "20");
 
       const res  = await fetch(`/api/articles?${params}`);
+      if (!res.ok) {
+        console.error(`[DashboardView] /api/articles returned ${res.status}`);
+        return;
+      }
       const data = await res.json();
 
       setTotal(data.total ?? 0);

@@ -23,6 +23,7 @@ const querySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  try {
   const params  = Object.fromEntries(req.nextUrl.searchParams.entries());
   const parsed  = querySchema.safeParse(params);
   if (!parsed.success) {
@@ -129,4 +130,11 @@ export async function GET(req: NextRequest) {
     pageSize,
     hasMore:  start + pageSize < total,
   });
+  } catch (err) {
+    console.error("[GET /api/articles]", err);
+    return NextResponse.json(
+      { error: "Failed to fetch articles", items: [], total: 0, page: 1, pageSize: 30, hasMore: false },
+      { status: 500 },
+    );
+  }
 }
