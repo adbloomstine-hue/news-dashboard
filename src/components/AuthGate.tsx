@@ -5,10 +5,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Eye, EyeOff, Lock, AlertCircle } from "lucide-react";
 
-// SHA-256 hash of "admin123" — used for client-side comparison.
+// SHA-256 hash of "Gaming123!" — used for client-side comparison.
 // The plain-text password is never stored; we hash the user's input and compare.
 const PASSWORD_HASH =
-  "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+  "2bc87f0f815b0b34a70b7d97941a9d3516f83a46d1666611fab0ecbf41070c92";
 
 const AUTH_KEY = "cga-dashboard-auth";
 
