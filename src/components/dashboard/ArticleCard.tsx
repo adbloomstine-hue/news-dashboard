@@ -98,11 +98,6 @@ export function ArticleCard({ article, className, style }: ArticleCardProps) {
                 {tag}
               </span>
             ))}
-            {article.ingestSource === "MANUAL" && (
-              <span className="text-[10px] font-sans uppercase tracking-wider text-ink-muted border border-paper-rule px-1.5 py-0.5">
-                Manual
-              </span>
-            )}
             <a
               href={article.url}
               target="_blank"
