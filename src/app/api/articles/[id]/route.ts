@@ -1,6 +1,7 @@
 /**
- * PATCH /api/articles/[id] — Update article fields (admin only)
- * GET  /api/articles/[id] — Get single article
+ * GET    /api/articles/[id] — Get single article
+ * PATCH  /api/articles/[id] — Update article fields (admin only)
+ * DELETE /api/articles/[id] — Delete article (admin only)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -91,6 +92,31 @@ export async function PATCH(
   });
 
   return NextResponse.json(formatArticle(updated));
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const existing = await prisma.article.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await writeAuditLog({
+    articleId:  id,
+    action:     "DELETED",
+    actorEmail: session.user.email,
+    details:    { title: existing.title, url: existing.url },
+  });
+
+  await prisma.article.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
 }
 
 function formatArticle(a: {

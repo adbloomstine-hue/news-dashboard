@@ -3,13 +3,17 @@
 import React, { useState } from "react";
 import {
   CheckCircle, XCircle, PenSquare, ExternalLink, Clock,
-  AlertCircle, Star, Link2,
+  AlertCircle, Star, Link2, Trash2,
 } from "lucide-react";
 import { OutletIcon } from "@/components/shared/OutletIcon";
 import { KeywordChipList } from "@/components/shared/KeywordChip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditArticleModal } from "./EditArticleModal";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "@/lib/use-toast";
 import { formatRelativeTime, parseJsonArray } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -19,6 +23,7 @@ interface QueueItemProps {
   article:   Article;
   onAction:  (id: string, action: "APPROVED" | "REJECTED" | "NEEDS_MANUAL") => Promise<void>;
   onUpdated: (updated: Article) => void;
+  onDelete:  (id: string) => Promise<void>;
 }
 
 const statusConfig = {
@@ -36,9 +41,11 @@ const sourceConfig: Record<string, { label: string; icon?: React.ReactNode }> = 
   URL:      { label: "URL Fetch", icon: <Link2 className="h-2.5 w-2.5" /> },
 };
 
-export function QueueItem({ article, onAction, onUpdated }: QueueItemProps) {
+export function QueueItem({ article, onAction, onUpdated, onDelete }: QueueItemProps) {
   const [loading,    setLoading]    = useState<string | null>(null);
   const [editOpen,   setEditOpen]   = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
   // lastAction: drives the approve/reject flash animation for 550ms
   const [lastAction, setLastAction] = useState<"APPROVED" | "REJECTED" | null>(null);
 
@@ -67,6 +74,23 @@ export function QueueItem({ article, onAction, onUpdated }: QueueItemProps) {
       toast({ variant: "error", title: "Action failed", description: "Please try again." });
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await onDelete(article.id);
+      setDeleteOpen(false);
+      toast({
+        variant:     "success",
+        title:       "Article deleted",
+        description: article.title.slice(0, 60) + "…",
+      });
+    } catch {
+      toast({ variant: "error", title: "Delete failed", description: "Please try again." });
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -245,6 +269,16 @@ export function QueueItem({ article, onAction, onUpdated }: QueueItemProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                onClick={() => setDeleteOpen(true)}
+                disabled={!!loading || deleting}
+                className="text-[--text-muted] hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 asChild
                 className="text-[--text-muted] hover:text-brand-400"
               >
@@ -263,6 +297,36 @@ export function QueueItem({ article, onAction, onUpdated }: QueueItemProps) {
         onClose={() => setEditOpen(false)}
         onSaved={onUpdated}
       />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Article</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this article? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-3">
+            <p className="text-sm text-[--text-primary] font-medium line-clamp-2">
+              {article.title}
+            </p>
+            <p className="text-xs text-[--text-muted] mt-1">{article.outlet}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+              {deleting ? (
+                <span className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

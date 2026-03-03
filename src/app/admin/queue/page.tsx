@@ -88,6 +88,12 @@ export default function QueuePage() {
     );
   }
 
+  async function handleDelete(id: string) {
+    const res = await fetch(`/api/articles/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Delete failed");
+    setArticles((prev) => prev.filter((a) => a.id !== id));
+  }
+
   function handleUpdated(updated: Article) {
     setArticles((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   }
@@ -190,6 +196,7 @@ export default function QueuePage() {
               article={article}
               onAction={handleAction}
               onUpdated={handleUpdated}
+              onDelete={handleDelete}
             />
           ))}
         </div>

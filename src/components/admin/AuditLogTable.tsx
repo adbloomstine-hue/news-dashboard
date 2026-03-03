@@ -14,6 +14,7 @@ const ACTION_BADGES: Record<string, { label: string; variant: string }> = {
   QUEUED:       { label: "Queued",        variant: "muted"   },
   MANUAL_ENTRY: { label: "Manual Entry",  variant: "warning" },
   NEEDS_MANUAL: { label: "Needs Manual",  variant: "warning" },
+  DELETED:      { label: "Deleted",      variant: "danger"  },
 };
 
 interface AuditLogTableProps {
