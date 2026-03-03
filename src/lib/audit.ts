@@ -12,7 +12,8 @@ export type AuditAction =
   | "MANUAL_ENTRY"
   | "INGESTED"
   | "NEEDS_MANUAL"
-  | "URL_INGESTED";
+  | "URL_INGESTED"
+  | "DELETED";
 
 export async function writeAuditLog({
   articleId,
