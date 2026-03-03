@@ -11,13 +11,17 @@ import { authOptions } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { sanitizeText } from "@/lib/sanitize";
 import { parseJsonArray } from "@/lib/utils";
+import { fetchUrlMetadata } from "@/lib/url-metadata";
 import type { Article } from "@/types";
+
+export const maxDuration = 30;
 
 const manualEntrySchema = z.object({
   title:         z.string().min(1).max(500),
   outlet:        z.string().min(1).max(200),
   outletDomain:  z.string().min(1).max(200),
   url:           z.string().url(),
+  imageUrl:      z.string().url().optional(),
   publishedAt:   z.string().datetime(),
   snippet:       z.string().max(1000).optional(),
   manualSummary: z.string().max(10000).optional(),
@@ -71,12 +75,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { tags, ...data } = parsed.data;
+  const { tags, imageUrl: providedImageUrl, ...data } = parsed.data;
 
   // Check for duplicate URL
   const existing = await prisma.article.findUnique({ where: { url: data.url } });
   if (existing) {
     return NextResponse.json({ error: "Article with this URL already exists", id: existing.id }, { status: 409 });
+  }
+
+  // Resolve image: use provided URL, or try to auto-fetch from article page
+  let imageUrl: string | null = providedImageUrl ?? null;
+  if (!imageUrl) {
+    try {
+      const meta = await fetchUrlMetadata(data.url);
+      if (!meta.fetchError && meta.imageUrl) {
+        imageUrl = meta.imageUrl;
+      }
+    } catch {
+      // Image fetch is best-effort — don't block article creation
+    }
   }
 
   const keywords: string[] = [];
@@ -87,6 +104,7 @@ export async function POST(req: NextRequest) {
       outlet:          sanitizeText(data.outlet),
       outletDomain:    sanitizeText(data.outletDomain),
       url:             data.url,
+      imageUrl,
       publishedAt:     new Date(data.publishedAt),
       snippet:         data.snippet ? sanitizeText(data.snippet) : null,
       manualSummary:   data.manualSummary ? sanitizeText(data.manualSummary) : null,

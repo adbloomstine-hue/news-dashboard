@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { PlusCircle, X, ExternalLink, AlertCircle } from "lucide-react";
+import { PlusCircle, X, ExternalLink, AlertCircle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ interface FormState {
   outlet:        string;
   outletDomain:  string;
   url:           string;
+  imageUrl:      string;
   publishedAt:   string;
   snippet:       string;
   manualSummary: string;
@@ -26,6 +27,7 @@ const DEFAULT_FORM: FormState = {
   outlet:        "",
   outletDomain:  "",
   url:           "",
+  imageUrl:      "",
   publishedAt:   new Date().toISOString().slice(0, 16),
   snippet:       "",
   manualSummary: "",
@@ -74,6 +76,7 @@ export default function ManualEntryPage() {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           ...form,
+          imageUrl:    form.imageUrl.trim() || undefined,
           publishedAt: new Date(form.publishedAt).toISOString(),
         }),
       });
@@ -183,6 +186,17 @@ export default function ManualEntryPage() {
             onChange={(e) => update("publishedAt", e.target.value)}
             required
             className="[color-scheme:dark]"
+          />
+        </Field>
+
+        {/* Image URL */}
+        <Field label="Image URL (optional — auto-fetched from article if left blank)">
+          <Input
+            type="url"
+            value={form.imageUrl}
+            onChange={(e) => update("imageUrl", e.target.value)}
+            placeholder="https://example.com/image.jpg"
+            leftIcon={<ImageIcon className="h-3.5 w-3.5" />}
           />
         </Field>
 
