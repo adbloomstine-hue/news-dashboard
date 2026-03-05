@@ -58,7 +58,7 @@ export function EditArticleModal({ article, open, onClose, onSaved }: EditArticl
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          publishedAt: form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined,
+          publishedAt: form.publishedAt ? form.publishedAt + ":00Z" : undefined,
         }),
       });
       if (!res.ok) {

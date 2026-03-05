@@ -28,7 +28,7 @@ const DEFAULT_FORM: FormState = {
   outletDomain:  "",
   url:           "",
   imageUrl:      "",
-  publishedAt:   new Date().toISOString().slice(0, 16),
+  publishedAt:   toLocalDatetimeString(new Date()),
   snippet:       "",
   manualSummary: "",
   tags:          [],
@@ -77,7 +77,7 @@ export default function ManualEntryPage() {
         body:    JSON.stringify({
           ...form,
           imageUrl:    form.imageUrl.trim() || undefined,
-          publishedAt: new Date(form.publishedAt).toISOString(),
+          publishedAt: form.publishedAt + ":00Z",
         }),
       });
 
@@ -319,4 +319,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+/** Format a Date as a local YYYY-MM-DDTHH:mm string for datetime-local inputs. */
+function toLocalDatetimeString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

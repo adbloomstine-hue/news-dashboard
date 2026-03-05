@@ -490,7 +490,12 @@ export async function fetchUrlMetadata(rawUrl: string): Promise<UrlMetadata> {
   ];
   for (const dc of dateCandidates) {
     if (!dc) continue;
-    const d = new Date(dc);
+    // Strip timezone offset so we store the "face value" date/time
+    // shown on the article, not a UTC-shifted version.
+    // e.g. "2026-03-05T14:30:00-07:00" → treat as 14:30, not 21:30 UTC
+    const tzRegex = /([Zz]|[+-]\d{2}:?\d{2})\s*$/;
+    const dateStr = tzRegex.test(dc) ? dc.replace(tzRegex, "") + "Z" : dc;
+    const d = new Date(dateStr);
     if (!isNaN(d.getTime())) { publishedAt = d; break; }
   }
 
