@@ -7,7 +7,7 @@
  *   - Requires admin authentication
  *   - Only fetches publicly accessible metadata (OG tags, JSON-LD, meta tags)
  *   - Never bypasses paywalls or authentication
- *   - Rate limited per admin user: 30 requests / hour
+ *   - Rate limited per admin user: 200 requests / hour
  *
  * Request body:
  *   { url: string }
@@ -58,8 +58,8 @@ const bodySchema = z.object({
     ),
 });
 
-// ─── Rate limit: 30 URL fetches per hour per admin ───────────────────────────
-const RATE_LIMIT      = 30;
+// ─── Rate limit: 200 URL fetches per hour per admin ──────────────────────────
+const RATE_LIMIT      = 200;
 const RATE_WINDOW_MS  = 60 * 60 * 1000;
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     if (!rl.success) {
       return NextResponse.json(
         {
-          error:   "Rate limit exceeded. You can fetch up to 30 URLs per hour.",
+          error:   "Rate limit exceeded. You can fetch up to 200 URLs per hour.",
           resetAt: rl.resetAt,
         },
         {
