@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Inbox, LayoutDashboard, PlusCircle, History, LogOut } from "lucide-react";
+import { Inbox, LayoutDashboard, PlusCircle, History, LogOut, Mail } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin/queue",        label: "Review Queue",  icon: Inbox },
+  { href: "/admin/clips",        label: "Email Clips",   icon: Mail },
   { href: "/admin/manual-entry", label: "Manual Entry",  icon: PlusCircle },
   { href: "/admin/audit",        label: "Audit Log",     icon: History },
   { href: "/",                   label: "Public View",   icon: LayoutDashboard },
